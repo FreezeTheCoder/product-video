@@ -73,9 +73,6 @@ and offers to install what is missing.
 
 ## Install
 
-The repository is private: ask the owner to add you as a collaborator first.
-The first time you clone, Git opens a browser window to sign in to GitHub.
-
 ### The easy way: ask Claude
 
 Open Claude Code and paste:
