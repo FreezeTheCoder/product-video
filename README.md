@@ -73,14 +73,16 @@ and offers to install what is missing.
 
 ## Install
 
+The repository is private: ask the owner to add you as a collaborator first.
+The first time you clone, Git opens a browser window to sign in to GitHub.
+
 ### The easy way: ask Claude
 
 Open Claude Code and paste:
 
-> Install the product-video skill: clone https://github.com/OWNER/product-video
+> Install the product-video skill: clone https://github.com/FreezeTheCoder/product-video
 > into ~/.claude/skills/product-video, then run npm install in that folder.
 
-(Replace `OWNER` with the GitHub account that hosts this repository.)
 
 Claude clones the repository and installs the packages. The skill is available
 straight away; if Claude doesn't pick it up, restart Claude Code.
@@ -88,7 +90,7 @@ straight away; if Claude doesn't pick it up, restart Claude Code.
 ### By hand
 
 ```bash
-git clone https://github.com/OWNER/product-video ~/.claude/skills/product-video
+git clone https://github.com/FreezeTheCoder/product-video ~/.claude/skills/product-video
 cd ~/.claude/skills/product-video
 npm install
 ```
