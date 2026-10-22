@@ -216,7 +216,8 @@ export async function render(dir: string): Promise<string> {
     t += p.items.reduce((n, it) => n + itemMs(it), 0);
   }
   f.push(mix.length
-    ? `${mix.join("")}amix=inputs=${mix.length}:normalize=0:duration=longest,apad[aud]`
+    // Same loudness for every video and voice: -16 LUFS, the usual web/podcast level.
+    ? `${mix.join("")}amix=inputs=${mix.length}:normalize=0:duration=longest,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000,apad[aud]`
     : `anullsrc=r=48000:cl=stereo[aud]`);
   writeFileSync(path.join(dir, "captions.srt"), cues.join("\n"));
 
