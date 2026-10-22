@@ -1,12 +1,13 @@
 # product-video
 
-A [Claude Code](https://claude.com/claude-code) skill that turns a screen
-recording of your web app into a narrated, captioned 1080p product video.
+A [Claude Code](https://claude.com/claude-code) skill that makes a narrated,
+captioned 1080p product video of your web app, in the language you choose.
 
-You click through the app yourself. Claude writes the voice-over, a local AI
-voice reads it, and the tool renders an MP4 with animated title and outro
-cards. Everything runs on your own computer: no video service, no upload, no
-per-video cost.
+You describe what to show and sign in. Claude clicks through the app itself
+and records it, writes the voice-over, and renders an MP4 with animated title
+and outro cards. The voice is [ElevenLabs](https://elevenlabs.io) (natural,
+about 30 languages, male or female) or, without a key, the free local Kokoro
+voice (English).
 
 ---
 
@@ -31,29 +32,34 @@ per-video cost.
 ## How it works
 
 ```
- 1. Brief        Claude asks: video name, description, audience, special requirements
- 2. Record       Chrome opens -> you sign in -> you click through -> you close the window
- 3. Script       Claude reads your clicks + screenshots and writes the narration
- 4. Render       AI voice + recording + animated cards + captions -> MP4
+ 1. Brief        Claude asks: name, objective, steps to show, audience, language, voice, extras
+ 2. Sign in      Chrome opens -> you sign in -> you tell Claude "done"
+ 3. Record       Claude explores the app, then records a clean take of your steps
+ 4. Script       Claude reads the clicks + screenshots and writes the narration
+ 5. Render       AI voice + recording + animated cards + captions -> MP4
 ```
 
-1. **Brief.** Claude asks four questions before recording. The answers decide
-   the tone (e.g. tutorial for new users, benefits for prospects) and anything
-   that must be covered.
-2. **Record.** A normal Chrome window opens. You sign in yourself (Claude never
-   sees or types passwords). Recording starts only after sign-in. The tool logs
-   every click, page change and scroll with a timestamp and a screenshot.
-3. **Script.** Claude looks at the log and the screenshots and writes
-   `script.yaml`: one narration line per step, timed to your clicks, plus a
-   title card and an outro card.
-4. **Render.** Each line is spoken by [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M),
-   a small AI voice that runs on your CPU. If a line is longer than the time
-   before your next click, the frame is held so the voice never talks over the
-   next action. Idle stretches can be cut. Output: 1920x1080, 30 fps, H.264, with
+1. **Brief.** Claude asks a few questions first. The objective and audience set
+   the story and tone; the steps say exactly what to show in the app.
+2. **Sign in.** A Chrome window opens. You sign in yourself (Claude never sees
+   or types passwords) and tell Claude when you're in.
+3. **Record.** Claude reads the page, tries each step, then records the whole
+   flow as one clean take, with a smooth drawn cursor and typed text. If a take
+   isn't right, Claude fixes the steps and records again: no redoing by you.
+   Before anything that saves or submits real data, Claude asks you first.
+4. **Script.** Claude looks at the click log and screenshots and writes
+   `script.yaml` in your language: one narration line per step, plus a title
+   card and an outro card.
+5. **Render.** Each line is spoken by ElevenLabs (or Kokoro). If a line is
+   longer than the time before the next click, the frame is held so the voice
+   never talks over the next action. Output: 1920x1080, 30 fps, H.264, with
    burnt-in captions.
 
-A typical 1–2 minute video takes 2–5 minutes of your time (recording) and about
-2 minutes to render.
+A typical 1–2 minute video takes you about 2 minutes (brief + sign-in) and
+about 5–10 minutes of Claude's time.
+
+Prefer to click through yourself? Say so, and Claude uses manual mode: you
+record, Claude narrates.
 
 ## Requirements
 
@@ -64,7 +70,8 @@ A typical 1–2 minute video takes 2–5 minutes of your time (recording) and ab
 | Google Chrome | recording | [google.com/chrome](https://www.google.com/chrome) (Microsoft Edge also works) |
 | ffmpeg | video processing | Windows: `winget install --id Gyan.FFmpeg -e` · macOS: `brew install ffmpeg` · Linux: `apt install ffmpeg` |
 | Git | installing and updating the skill | [git-scm.com](https://git-scm.com) or `winget install Git.Git` |
-| ~1.2 GB disk | packages (~430 MB) + voice model (~330 MB, downloaded once) | |
+| ElevenLabs API key (optional) | natural voices in ~30 languages | [elevenlabs.io](https://elevenlabs.io) → Developers → API keys. Paid per character; a 2-minute video is roughly 2,000 characters |
+| ~1.2 GB disk | packages (~430 MB) + Kokoro voice model (~330 MB, only if used) | |
 
 No GPU is needed. Tested on Windows 11; macOS and Linux should work.
 
@@ -108,39 +115,49 @@ node ~/.claude/skills/product-video/src/cli.ts doctor
   ok    chrome/edge: C:/Program Files/Google/Chrome/Application/chrome.exe
 ```
 
+### Add your ElevenLabs key (optional)
+
+Create a file named `.env` in the skill folder with one line:
+
+```
+ELEVENLABS_API_KEY=your-key-here
+```
+
+or set `ELEVENLABS_API_KEY` as an environment variable. Don't paste the key into
+the chat. Without a key, videos use the free Kokoro voice, in English only.
+
 ## Make your first video
 
 1. In Claude Code, open the folder where you want videos saved, and say:
 
    > make a product video
 
-2. Answer the four questions:
+2. Answer the questions:
 
    | Question | Example |
    |---|---|
    | Name of the video | Action Plan Tracker |
-   | Description | Shows how to find a center's open issues, follow them through to approval, and check the photo evidence. |
+   | Objective | Teach new users to close issues on their own; they should know where to look tomorrow morning. |
+   | Steps | Open Action Plan Tracker → filter to "Open" → open the first issue → view the photo evidence → approve it |
    | Audience | New users of the platform |
+   | Language | English (or German, Arabic, Hindi, ...) |
+   | Voice | Female or male |
    | Special requirements | none (or e.g. "add a stat card: 85 centers audited this quarter") |
 
    Plus the URL to start from.
 
-3. A Chrome window opens.
-   - **Sign in** if the site asks. Recording starts after you're in.
-   - **Press F11** for fullscreen. On a 1920x1080 screen this gives a pixel-perfect 1080p video.
-   - **Click through calmly.** Pause about 2 seconds after each click so the
-     narration has room. Mistakes and waiting are fine; they can be cut.
-   - **Close the window** when you're done.
+3. A Chrome window opens. **Sign in**, then tell Claude "done". Don't touch the
+   window after that while Claude works in it.
 
-4. Claude writes the script and renders the video. You get
+4. Claude records the steps, writes the script and renders the video. You get
    `product-videos/<name>/<name>.mp4`.
 
-### Recording tips
+### Tips for the steps
 
-- Plan 4–8 steps before you start. Shorter videos are better videos.
+- 4–8 steps make a good video. Shorter videos are better videos.
+- Name things the way they appear on screen ("the Approvals tab").
 - Use demo data. Real customer names or emails on screen end up in the video.
-- Anything you save or submit while recording really happens in the app.
-- Move the mouse deliberately; the cursor is visible in the video.
+- Claude asks before anything that saves, approves or sends real data.
 
 ## Editing a video
 
@@ -150,7 +167,7 @@ Just tell Claude what to change:
 
 Claude edits `script.yaml` and renders again. Only changed lines are re-voiced
 and only changed cards are redrawn, so edits take seconds to a minute.
-Record again only if you want different things on screen.
+For different things on screen, Claude changes the steps and records a new take.
 
 ## Customising the skill
 
@@ -161,7 +178,8 @@ All behaviour is in plain text files you can edit (or ask Claude to edit).
 | `instructions/brand.md` | Your product's name, terms and how to say them, tone, words to avoid. **Edit this first.** |
 | `instructions/narration.md` | How the voice-over is written: style, pacing, timing, voice choice. |
 | `instructions/cards.md` | Which animated cards are used and when (default: title + outro only). |
-| `instructions/recording.md` | The tips Claude gives before recording. |
+| `instructions/driving.md` | How Claude drives the app and paces a take. |
+| `instructions/recording.md` | The tips Claude gives in manual mode. |
 | `assets/logo.png` | Logo on the title and outro cards (transparent PNG, square works best). |
 | `SKILL.md` | The step-by-step process Claude follows, including the brief questions. |
 
@@ -170,13 +188,12 @@ Changes apply to the next video. Edits to your copy stay on your computer; see
 
 ### Voices
 
-| Voice | Sound |
-|---|---|
-| `af_heart` | warm female, American (default, best quality) |
-| `af_bella` | bright female, American |
-| `bf_emma` | female, British |
-| `am_michael`, `am_fenrir` | male, American |
-| `bm_george` | male, British |
+`voice: female` or `voice: male` picks a good default for the engine in use.
+
+| Engine | Female | Male | Other voices |
+|---|---|---|---|
+| ElevenLabs | Sarah | Brian | any voice ID from your ElevenLabs library; or set `ELEVENLABS_VOICE_FEMALE` / `ELEVENLABS_VOICE_MALE` |
+| Kokoro | `af_heart` | `am_michael` | `af_bella`, `bf_emma` (British), `am_fenrir`, `bm_george` (British) |
 
 ### Card style
 
@@ -192,7 +209,9 @@ the time of each click).
 
 ```yaml
 title: Action Plan Tracker          # also the output file name
-voice: af_heart
+language: en                        # en, de, fr, es, ar, hi, zh, ...
+voice: female                       # female | male | a voice ID
+engine: elevenlabs                  # optional; default: elevenlabs if a key is set, else kokoro
 speed: 1.0                          # 0.9 slower ... 1.1 faster
 captions: true
 start: 7800                         # skip everything before this
@@ -222,7 +241,9 @@ Claude runs these for you. From any folder:
 
 ```bash
 node ~/.claude/skills/product-video/src/cli.ts doctor                    # check requirements
-node ~/.claude/skills/product-video/src/cli.ts capture <url> <out-dir>   # record
+node ~/.claude/skills/product-video/src/cli.ts drive <url> <out-dir>     # open Chrome for Claude to drive
+node ~/.claude/skills/product-video/src/cli.ts do <out-dir> look         # see the page (also: step, run, record, close)
+node ~/.claude/skills/product-video/src/cli.ts capture <url> <out-dir>   # manual mode: you record
 node ~/.claude/skills/product-video/src/cli.ts render <out-dir>          # voice + cards + MP4
 ```
 
@@ -231,12 +252,16 @@ Environment variables:
 | Variable | Default | Purpose |
 |---|---|---|
 | `PV_BROWSER` | `chrome`, then `msedge` | Browser to record with |
+| `PV_VIEWPORT` | `1280x720@1.5` | Page size and zoom when Claude drives (1280x720 at 1.5x = 1080p video) |
+| `ELEVENLABS_API_KEY` | (none) | ElevenLabs key; also read from `.env` in the skill folder |
+| `ELEVENLABS_MODEL` | `eleven_multilingual_v2` | ElevenLabs model |
 
 ### Output folder
 
 ```
 product-videos/action-plan-tracker/
-  brief.md              your answers to the four questions
+  brief.md              your answers to the brief
+  steps.yaml            the clicks Claude records (drive mode)
   capture.mkv           raw recording (large; delete when done)
   capture-1080p.mp4     recording fitted to 1080p (cached)
   session.json          clicks, page changes and timings
@@ -270,14 +295,17 @@ resolve that. To keep your edits safe, commit them in your copy first.
 - **Sign-in is yours.** You type your credentials in the Chrome window. The
   session exists only in that browser and is gone when it closes. Nothing is
   saved to disk, and recording starts only after sign-in.
-- **Password fields are masked** in the click log (`(hidden)`).
-- **Everything is local.** Recording, voice and rendering run on your computer.
-  The only downloads are npm packages and the voice model (from Hugging Face,
-  once).
+- **Claude never types passwords.** The driver refuses to fill password and
+  one-time-code fields, and they are masked in the click log (`(hidden)`).
+- **Claude asks before real changes.** Anything that saves, sends, approves or
+  deletes data is confirmed with you first.
+- **Mostly local.** Recording and rendering run on your computer. With
+  ElevenLabs, the narration text (only the text) is sent to ElevenLabs to be
+  voiced. With Kokoro, voice runs locally too.
 - **Claude sees your screenshots.** To write the narration, Claude reads the
   screenshots and click log, which are sent to Claude like any other file you
   share in Claude Code. Use demo data for anything sensitive.
-- **Actions are real.** Anything you click while recording happens in the app.
+- **Actions are real.** Anything clicked while recording happens in the app.
 
 ## Troubleshooting
 
@@ -285,9 +313,11 @@ resolve that. To keep your edits safe, commit them in your copy first.
 |---|---|
 | `doctor` says ffmpeg is missing | Install it (see [Requirements](#requirements)), then restart Claude Code so the new PATH is picked up. |
 | "Could not start Google Chrome or Microsoft Edge" | Install Chrome, or set `PV_BROWSER=msedge`. |
-| Video has bars at the top and bottom | The window wasn't fullscreen. Press F11 before clicking through. |
-| First render is slow | It downloads the voice model (~330 MB) once, into `~/.cache/product-video`. |
-| Narration talks over the next step | Click more slowly while recording, or ask Claude to shorten that line. |
+| Claude can't find a button | Tell Claude what it's called on screen, or switch to manual mode for that video. |
+| "Kokoro speaks English only" | Add an ElevenLabs key for other languages. |
+| `ElevenLabs 401` / `402` | The key is wrong, or the ElevenLabs account is out of credits. |
+| Manual mode: bars at the top and bottom | The window wasn't fullscreen. Press F11 before clicking through. |
+| First Kokoro render is slow | It downloads the voice model (~330 MB) once, into `~/.cache/product-video`. |
 | Voice mispronounces a word | Add how to say it to `instructions/brand.md` (e.g. "Q3 → Q three"). |
 | `npm warn allow-scripts` during install | Harmless; the needed binaries ship with the packages. |
 
@@ -298,9 +328,11 @@ SKILL.md               instructions Claude follows (the skill itself)
 instructions/          style guides Claude reads before writing
 assets/logo.png        logo for the cards
 src/
-  cli.ts               commands: doctor, capture, render
-  capture.ts           Chrome recording + click/scroll/page logging
-  voice.ts             Kokoro text-to-speech (cached)
+  cli.ts               commands: doctor, drive, do, capture, render
+  drive.ts             Claude-driven browser: look, steps, recorded takes
+  capture.ts           recorder + click/scroll/page logging; manual mode
+  voice.ts             text-to-speech dispatch + Kokoro (cached)
+  eleven.ts            ElevenLabs text-to-speech
   cards.ts             animated cards, drawn frame by frame in headless Chrome
   render.ts            timeline, frame holds, cuts, captions, final encode
   bin.ts               ffmpeg/ffprobe helpers
@@ -314,7 +346,7 @@ dependencies: [Playwright](https://playwright.dev) (Chrome control),
 
 ## Licences
 
-- Kokoro-82M voice model: Apache-2.0.
+- Kokoro-82M voice model: Apache-2.0. ElevenLabs voices: under your ElevenLabs plan's terms.
 - Playwright: Apache-2.0. ffmpeg: LGPL/GPL (installed separately).
 - The logo in `assets/logo.png` belongs to AutoSmart. Replace it with your own
   if you use this skill for another product.

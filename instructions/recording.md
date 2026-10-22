@@ -1,4 +1,7 @@
-# Recording tips (tell the user before they record)
+# Recording tips for manual mode (tell the user before they record)
+
+Only for `capture`, when the user clicks through themselves. When Claude drives,
+see `driving.md`.
 
 Keep this short when relaying it: three or four bullets.
 

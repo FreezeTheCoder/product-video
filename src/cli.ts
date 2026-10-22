@@ -1,11 +1,15 @@
 // product-video CLI
 //   node src/cli.ts doctor
-//   node src/cli.ts capture <url> <out-dir>
+//   node src/cli.ts drive <url> <out-dir>          Claude drives (see drive.ts)
+//   node src/cli.ts do <out-dir> <look | step <yaml> | run <file> | record <file> | close>
+//   node src/cli.ts capture <url> <out-dir>        the user records by hand
 //   node src/cli.ts render <out-dir>
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { which } from "./bin.ts";
+import { elevenKey } from "./eleven.ts";
 import { capture } from "./capture.ts";
+import { command, drive } from "./drive.ts";
 
 
 const [cmd, ...args] = process.argv.slice(2);
@@ -26,6 +30,9 @@ switch (cmd) {
       return "installed";
     });
     check("ffmpeg", () => which("ffmpeg"));
+    console.log(elevenKey()
+      ? "  ok    elevenlabs: key set"
+      : "  info  elevenlabs: no key (optional; without it the free English-only Kokoro voice is used)");
     check("ffprobe", () => which("ffprobe"));
     check("chrome/edge", () => {
       const paths = [
@@ -39,6 +46,18 @@ switch (cmd) {
       return hit;
     });
     process.exit(ok ? 0 : 1);
+  }
+  case "drive": {
+    const [url, out] = args;
+    if (!url || !out) throw new Error("usage: drive <url> <out-dir>");
+    await drive(url, path.resolve(out));
+    break;
+  }
+  case "do": {
+    const [out, sub, arg] = args;
+    if (!out || !sub) throw new Error("usage: do <out-dir> <look | step <yaml> | run <file> | record <file> | close>");
+    process.exitCode = (await command(path.resolve(out), sub, arg)) ? 0 : 1;
+    break;
   }
   case "capture": {
     const [url, out] = args;
@@ -56,6 +75,6 @@ switch (cmd) {
     break;
   }
   default:
-    console.log("usage: node src/cli.ts <doctor | capture <url> <out-dir> | render <out-dir>>");
+    console.log("usage: node src/cli.ts <doctor | drive <url> <out-dir> | do <out-dir> ... | capture <url> <out-dir> | render <out-dir>>");
     process.exit(1);
 }

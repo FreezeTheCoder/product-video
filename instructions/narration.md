@@ -1,7 +1,15 @@
 # Writing the voice-over
 
-Read this before writing any `script.yaml`. The voice is a small local model: it
-sounds natural only when the script is written for speech.
+Read this before writing any `script.yaml`. Even good AI voices sound natural
+only when the script is written for speech.
+
+## Language
+- Write every line and every card in the brief's language, natively: not a
+  translation of English sentences. Use that language's natural word order and idioms.
+- The style rules below apply in spirit: short sentences, conversational, the
+  informal "you" where the culture and audience allow it (e.g. "du" for a German
+  startup audience, "Sie" for corporate or older audiences; ask if unsure).
+- Keep product names and UI labels exactly as they appear on screen.
 
 ## Voice
 - Talk to one person, like a colleague showing them the app. Use "you".
@@ -34,10 +42,15 @@ The voice model follows punctuation. Use it to direct delivery:
 - Merge rapid clicks into one line. Skip scrolls unless they reveal something new.
 - Cut idle stretches over ~3 seconds with `cuts`.
 
-## Voices (Kokoro)
-Best to worst: `af_heart` (default, warm female), `af_bella` (bright female),
-`bf_emma` (British female), `am_michael` / `am_fenrir` (male, flatter),
-`bm_george` (British male). Use `speed: 1.05` for energetic demos, `0.95` for tutorials.
+## Voices
+Set `voice` to the brief's choice: `female` or `male`. That picks a good default
+voice for whichever engine runs (ElevenLabs when a key is set, else Kokoro).
+- ElevenLabs: any voice ID from the user's ElevenLabs library also works, if
+  they ask for one. ElevenLabs reads the neighbouring lines for context, so
+  delivery flows across segments.
+- Kokoro (English only): `af_heart` (female default), `af_bella`, `bf_emma`
+  (British), `am_michael` (male default), `am_fenrir`, `bm_george` (British).
+Use `speed: 1.05` for energetic demos, `0.95` for tutorials.
 
 ## Before rendering, check
 - Read every line out loud in your head. If it sounds like a brochure, rewrite it.

@@ -27,6 +27,8 @@ export interface Theme {
   text: string;
   muted: string;
   font: string;
+  /** Language of the card text; right-to-left scripts flip the layout. */
+  lang?: string;
   /** Logo image shown on title and outro cards (path relative to the skill, or absolute). */
   logo?: string;
 }
@@ -76,7 +78,9 @@ function html(card: Card, th: Theme): string {
     }
   })();
   const center = card.align !== "left";
-  return `<!doctype html><html><head><meta charset="utf-8"><style>
+  const lang = th.lang ?? "en";
+  const rtl = /^(ar|fa|he|ur)/.test(lang);
+  return `<!doctype html><html lang="${esc(lang)}" dir="${rtl ? "rtl" : "ltr"}"><head><meta charset="utf-8"><style>
     *{margin:0;box-sizing:border-box}
     html,body{width:1920px;height:1080px;overflow:hidden}
     body{background:${th.background};
@@ -87,7 +91,7 @@ function html(card: Card, th: Theme): string {
     .sub{font-size:40px;font-weight:400;color:${th.muted};margin-top:28px;max-width:1400px;line-height:1.3}
     ${center ? ".sub{margin-left:auto;margin-right:auto}" : ""}
     .bar{width:0;height:10px;border-radius:5px;background:${th.accent};margin:36px 0 8px;animation:grow .8s .2s cubic-bezier(.2,.8,.2,1) forwards}
-    ${center ? ".bar{margin-left:auto;margin-right:auto}ul{margin:0 auto;text-align:left}" : ""}
+    ${center ? ".bar{margin-left:auto;margin-right:auto}ul{margin:0 auto;text-align:start}" : ""}
     .logo{width:170px;height:170px;object-fit:contain;margin-bottom:48px}
     h2 + .bar{margin-top:0;margin-bottom:48px}
     ul{list-style:none}
@@ -100,6 +104,7 @@ function html(card: Card, th: Theme): string {
     @keyframes left{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}
     @keyframes pop{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:none}}
     @keyframes grow{to{width:160px}}
+    ${rtl ? "h1,h2,.num{letter-spacing:0}" : ""}
   </style></head><body>${body}<script>
     // Driven by the renderer: set every animation (and counters) to time t (ms).
     window.__seek = (t) => {

@@ -12,7 +12,7 @@ import YAML from "yaml";
 import { contentBox, ffmpeg, videoSize } from "./bin.ts";
 import type { Session } from "./capture.ts";
 import { closeCards, DEFAULT_THEME, renderCard, type Card, type Theme } from "./cards.ts";
-import { speak } from "./voice.ts";
+import { defaultEngine, speak, type Engine } from "./voice.ts";
 
 export interface Segment {
   at: number;
@@ -22,7 +22,12 @@ export interface Segment {
 
 export interface Script {
   title?: string;
+  /** "female" / "male", or a voice id of the engine. */
   voice?: string;
+  /** Default: elevenlabs when a key is set, else kokoro (English only). */
+  engine?: Engine;
+  /** Language of the narration and captions, e.g. "en", "de", "ar", "hi". */
+  language?: string;
   speed?: number;
   captions?: boolean;
   start?: number;
@@ -46,6 +51,24 @@ function keep(from: number, to: number, cuts: [number, number][]): [number, numb
 const LEAD = 250; // ms from a segment's start to its voice
 const TAIL = 450; // ms of breathing room after each line
 const CARD_MIN = 2500; // shortest card, ms
+
+/** Caption fonts that can draw each script (libass does not fall back on its own). */
+function captionFont(lang: string): string {
+  const win = process.platform === "win32";
+  const mac = process.platform === "darwin";
+  const pick = (w: string, m: string, l: string) => (win ? w : mac ? m : l);
+  switch (lang.slice(0, 2)) {
+    case "zh": return pick("Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC");
+    case "ja": return pick("Yu Gothic UI", "Hiragino Sans", "Noto Sans CJK JP");
+    case "ko": return pick("Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR");
+    case "hi": case "mr": case "ne": return pick("Nirmala UI", "Kohinoor Devanagari", "Noto Sans Devanagari");
+    case "ta": case "te": case "bn": case "gu": case "kn": case "ml": case "pa": return pick("Nirmala UI", "Tamil Sangam MN", "Noto Sans");
+    case "th": return pick("Leelawadee UI", "Thonburi", "Noto Sans Thai");
+    case "ar": case "fa": case "ur": return pick("Segoe UI", "Geeza Pro", "Noto Sans Arabic");
+    case "he": return pick("Segoe UI", "Arial Hebrew", "Noto Sans Hebrew");
+    default: return pick("Segoe UI", "Helvetica Neue", "DejaVu Sans");
+  }
+}
 
 const srtTime = (ms: number) => {
   const p = (n: number, w = 2) => String(Math.floor(n)).padStart(w, "0");
@@ -83,9 +106,15 @@ export async function render(dir: string): Promise<string> {
   const scriptFile = path.join(dir, "script.yaml");
   if (!existsSync(scriptFile)) throw new Error(`Missing ${scriptFile}`);
   const script: Script = YAML.parse(readFileSync(scriptFile, "utf8"));
-  const voice = script.voice ?? "af_heart";
+  const voice = script.voice ?? "female";
+  const engine = script.engine ?? defaultEngine();
+  const language = script.language ?? "en";
+  if (engine === "kokoro" && !language.startsWith("en")) {
+    throw new Error(`Kokoro speaks English only. For "${language}" set an ElevenLabs key (see README).`);
+  }
+  console.log(`  voice: ${engine} ${voice}, language ${language}`);
   const speed = script.speed ?? 1;
-  const theme: Theme = { ...DEFAULT_THEME, ...script.theme };
+  const theme: Theme = { ...DEFAULT_THEME, ...script.theme, lang: language };
   const start = script.start ?? 0;
   const end = Math.min(script.end ?? session.durationMs, session.durationMs);
   const cuts = script.cuts ?? [];
@@ -107,7 +136,8 @@ export async function render(dir: string): Promise<string> {
       let clip: { file: string; ms: number } | undefined;
       if (text) {
         process.stdout.write(`  voice ${i + 1}/${segs.length} `);
-        clip = await speak(text, voice, speed, path.join(dir, "voice"));
+        const near = (j: number) => segs[j]?.text?.trim().replace(/\s+/g, " ") || undefined;
+        clip = await speak(text, voice, speed, path.join(dir, "voice"), engine, { previous: near(i - 1), next: near(i + 1) });
         console.log(`${(clip.ms / 1000).toFixed(1)}s`);
       }
       const need = clip ? LEAD + clip.ms + TAIL : 0;
@@ -158,7 +188,7 @@ export async function render(dir: string): Promise<string> {
     }
   });
   const subs = script.captions !== false
-    ? `,subtitles=captions.srt:force_style='FontName=Segoe UI,FontSize=13,PrimaryColour=&H00FFFFFF,BackColour=&H99000000,BorderStyle=4,Outline=0,Shadow=0,MarginV=40'`
+    ? `,subtitles=captions.srt:force_style='FontName=${captionFont(language)},FontSize=13,PrimaryColour=&H00FFFFFF,BackColour=&H99000000,BorderStyle=4,Outline=0,Shadow=0,MarginV=40'`
     : "";
   f.push(`${items.map((_, i) => `[v${i}]`).join("")}concat=n=${items.length}:v=1:a=0${subs}[vid]`);
 
@@ -173,7 +203,8 @@ export async function render(dir: string): Promise<string> {
       inputs.push("-i", path.relative(dir, p.clip.file));
       f.push(`[${idx}:a]aresample=48000,adelay=${at}:all=1[a${idx}]`);
       mix.push(`[a${idx}]`);
-      const parts = p.text.match(/[^.!?]+[.!?]*/g)?.map((s) => s.trim()).filter(Boolean) ?? [p.text];
+      // Sentence ends in Latin, CJK, Devanagari and Arabic scripts.
+      const parts = p.text.match(/[^.!?。！？।؟]+[.!?。！？।؟]*/g)?.map((s) => s.trim()).filter(Boolean) ?? [p.text];
       const total = parts.reduce((n, s) => n + s.length, 0);
       let c = at;
       for (const s of parts) {
@@ -189,7 +220,7 @@ export async function render(dir: string): Promise<string> {
     : `anullsrc=r=48000:cl=stereo[aud]`);
   writeFileSync(path.join(dir, "captions.srt"), cues.join("\n"));
 
-  const name = (script.title ?? "video").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").toLowerCase() || "video";
+  const name = (script.title ?? "video").replace(/[^\p{L}\p{N}\- ]+/gu, "").trim().replace(/\s+/g, "-").toLowerCase() || "video";
   const out = path.join(dir, `${name}.mp4`);
   console.log("  rendering ...");
   ffmpeg([

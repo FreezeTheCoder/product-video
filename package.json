@@ -1,11 +1,12 @@
 {
   "name": "product-video",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "Record a product walkthrough in Chrome; Claude writes the voice-over; renders a narrated 1080p MP4.",
+  "description": "Claude drives a web app in Chrome and records it, writes the voice-over, and renders a narrated 1080p MP4 in any language.",
   "type": "module",
   "scripts": {
     "doctor": "node src/cli.ts doctor",
+    "drive": "node src/cli.ts drive",
     "capture": "node src/cli.ts capture",
     "render": "node src/cli.ts render",
     "pack": "node src/pack.ts"
