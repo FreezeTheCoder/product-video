@@ -102,18 +102,20 @@ segments:              # in time order; one per step the viewer should understan
     card: { type: title, title: "Approvals & Reports", subtitle: "For area managers" }
     text: Checking dealership fixes shouldn't take all week. Here's how it works.
   - at: 2000
-    text: Your day starts here. Pending, in progress, and done... all in one view.
+    text: Your day starts here – pending, in progress and done, all in one view.
   - at: 5500
-    text: When a dealership fixes an issue, it comes to you for approval.
+    text: And when a dealership fixes an issue, it comes straight to you for approval.
   - at: 40800
     card: { type: outro, title: "AutoSmart Audit", subtitle: "Every center. Every finding." }
-    text: AutoSmart Audit. Every center, every finding... under control.
+    text: That's AutoSmart Audit. Every center, every finding... under control.
 ```
 
 - A plain segment narrates the recording from its `at` until the next segment.
 - A segment with `card` pauses the recording at `at`, plays the animated card
   while its `text` is spoken, then the recording continues.
 - **Quote every string inside `{ }`**: an unquoted comma splits the value.
+- Silences between lines are tightened automatically (frozen screen time is cut);
+  cards fade in and out.
 - The voice engine is ElevenLabs when a key is set, else Kokoro. Kokoro speaks
   English only: for another language without a key, tell the user and stop.
 

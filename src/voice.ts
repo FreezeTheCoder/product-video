@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { homedir } from "node:os";
-import { mediaDuration } from "./bin.ts";
+import { ffmpeg, mediaDuration } from "./bin.ts";
 import { elevenKey, elevenSpeak, type ElevenContext } from "./eleven.ts";
 
 const MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX";
@@ -25,7 +25,14 @@ export async function speak(text: string, voice: string, speed: number, dir: str
     if (engine === "elevenlabs") await elevenSpeak(text, voice, speed, file, ctx);
     else await kokoro(text, KOKORO_VOICES[voice] ?? voice, speed, file);
   }
-  return { file, ms: mediaDuration(file) };
+  // Engines pad clips with silence; trim it so the gaps between lines are set
+  // by the renderer alone and stay short and even.
+  const trimmed = file.replace(/\.\w+$/, ".trim.wav");
+  if (!existsSync(trimmed)) {
+    const cut = (keep: number) => `silenceremove=start_periods=1:start_threshold=-50dB:start_silence=${keep}`;
+    ffmpeg(["-i", file, "-af", `${cut(0.03)},areverse,${cut(0.08)},areverse`, trimmed]);
+  }
+  return { file: trimmed, ms: mediaDuration(trimmed) };
 }
 
 async function kokoro(text: string, voice: string, speed: number, file: string) {

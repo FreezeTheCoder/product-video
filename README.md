@@ -52,8 +52,10 @@ voice (English).
    card and an outro card.
 5. **Render.** Each line is spoken by ElevenLabs (or Kokoro). If a line is
    longer than the time before the next click, the frame is held so the voice
-   never talks over the next action. Output: 1920x1080, 30 fps, H.264, with
-   burnt-in captions.
+   never talks over the next action. If it's shorter, frozen screen time is
+   cut, so pauses between lines stay natural (under about a second). Cards fade
+   in and out, and every video has the same loudness. Output: 1920x1080,
+   30 fps, H.264, with burnt-in captions.
 
 A typical 1–2 minute video takes you about 2 minutes (brief + sign-in) and
 about 5–10 minutes of Claude's time.
@@ -214,6 +216,7 @@ voice: female                       # female | male | a voice ID
 engine: elevenlabs                  # optional; default: elevenlabs if a key is set, else kokoro
 speed: 1.0                          # 0.9 slower ... 1.1 faster
 captions: true
+tighten: true                       # cut frozen screen time so pauses between lines stay short
 start: 7800                         # skip everything before this
 end: 61500                          # stop here
 cuts:                               # drop idle stretches
